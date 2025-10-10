@@ -207,45 +207,29 @@ git clone https://github.com/LondheShubham153/retail-store-sample-app.git
 
 ### Step 4. Deploy Infrastructure with Terraform:
 
-The deployment is split into two phases for better control:
-
-
-### Phase 1 of Terraform: Create EKS Cluster 
-
-In Phase 1: Terraform Initialises and creates resources within the retail_app_eks module. 
-
 ```sh
 cd retail-store-sample-app/terraform/
 terraform init
-terraform apply -target=module.retail_app_eks -target=module.vpc --auto-approve
+terraform apply --auto-approve
 ```
 
 <img width="1205" height="292" alt="image" src="https://github.com/user-attachments/assets/6f1e407e-4a4e-4a4c-9bdf-0c9b89681368" />
-
 
 This creates the core infrastructure, including:
 - VPC with public and private subnets
 - Amazon EKS cluster with Auto Mode enabled
 - Security groups and IAM roles
-  
 
-### Step 6: Update kubeconfig to Access the Amazon EKS Cluster:
-```
-aws eks update-kubeconfig --name retail-store --region <region>
-```
-
-### Phase 2 of Terraform: Once you update kubeconfig, apply the Remaining Configuration:
-
-
-```bash
-terraform apply --auto-approve
-```
-
-
-This deploys:
+And deploys:
 - ArgoCD for Setup GitOps
 - NGINX Ingress Controller
 - Cert Manager for SSL certificates
+
+
+### Step 5: Update kubeconfig to Access the Amazon EKS Cluster:
+```
+aws eks update-kubeconfig --name retail-store --region <region>
+```
 
 > Application is live with Public image:
 
@@ -257,7 +241,7 @@ This deploys:
 > [!NOTE]
 > Let's move forward with GitOps principle utilising Amazon private registry to create private registry and store images.
 
-### Step 7: GitHub Actions (Production Branch Only)
+### Step 6: GitHub Actions (Production Branch Only)
 
 > **Note**: This step is only required if you're using the **Production branch** for automated deployments. Skip this step if using the **Public Application branch** for simple deployment.
 
@@ -295,7 +279,7 @@ Check if the nodes are running:
 kubectl get nodes
 ```
 
-### Step 8: Access the Application:
+### Step 7: Access the Application:
 
 The application is exposed through the NGINX Ingress Controller. Get the load balancer URL:
 
@@ -307,7 +291,7 @@ Use the EXTERNAL-IP of the ingress-nginx-controller service to access the applic
 
 <img width="2912" height="1756" alt="image" src="https://github.com/user-attachments/assets/095077d6-d3cb-48f6-b021-e977db5fb242" />
 
-### Step 9: Argo CD Automated Deployment:
+### Step 8: Argo CD Automated Deployment:
 
 **Verify ArgoCD installation**
 
@@ -316,7 +300,7 @@ kubectl get pods -n argocd
 ```
 
 
-### Step 10: Port-forward to Argo CD UI and login:
+### Step 9: Port-forward to Argo CD UI and login:
 
 **Get ArgoCD admin password**
 ```
@@ -355,17 +339,7 @@ kubectl get ingress -n retail-store
 ```
 
 ### Step 12: Cleanup
-
 To delete all resources created by Terraform:
-
-
-**For Phase 1: Run this command**
-
-```bash
-terraform destroy -target=module.retail_app_eks --auto-approve
-```
-
-**For Phase 2: Run this command**
 ```
 terraform destroy --auto-approve
 ```
