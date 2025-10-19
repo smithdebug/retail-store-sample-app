@@ -10,7 +10,7 @@ spec:
     - list:
         elements:
           - app: cart
-            syncWave: "1"
+            syncWave: "0"
           - app: catalog
             syncWave: "1"
           - app: ui
