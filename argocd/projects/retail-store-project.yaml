@@ -34,7 +34,7 @@ spec:
       kind: ServiceAccount
     - group: 'apps'
       kind: Deployment
-    - group: ''
+    - group: 'apps'
       kind: Pod
     - group: 'apps'
       kind: StatefulSet
