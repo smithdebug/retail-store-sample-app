@@ -11,6 +11,10 @@ spec:
         elements:
           - app: cart
             syncWave: "1"
+          - app: catalog
+            syncWave: "1"
+          - app: ui
+            syncWave: "2"
   template:
     metadata:
       name: 'retail-store-{{.app}}'
