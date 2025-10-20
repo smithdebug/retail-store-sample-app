@@ -34,7 +34,7 @@ spec:
             - ${VALUES_FILE}
       destination:
         server: https://kubernetes.default.svc
-        namespace: retail-store-${ENVIRONMENT}
+        namespace: retail-store
       syncPolicy:
         automated:
           prune: true
