@@ -1,0 +1,131 @@
+stages:
+  - validate
+  - deploy
+  - verify
+
+variables:
+  ARGOCD_SERVER: "argocd-server.argocd.svc.cluster.local"
+  ARGOCD_NAMESPACE: "argocd"
+  KUBECTL_VERSION: "1.28.0"
+
+# Deploy to development
+deploy:dev:
+  stage: deploy
+  image: alpine/k8s:${KUBECTL_VERSION}
+  variables:
+    ENVIRONMENT: "dev"
+    VALUES_FILE: "dev-values.yaml"
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_DEV" | base64 -d > ~/.kube/config
+    - apk add --no-cache gettext  # Install envsubst
+  script:
+    - echo "Generating ApplicationSet for ${ENVIRONMENT}..."
+    - envsubst < applicationset-template.yaml > applicationset-${ENVIRONMENT}.yaml
+    - cat applicationset-${ENVIRONMENT}.yaml  # Debug: show generated file
+    - echo "Deploying ApplicationSet to ${ENVIRONMENT}..."
+    - kubectl apply -f applicationset-${ENVIRONMENT}.yaml -n ${ARGOCD_NAMESPACE}
+    - echo "✅ ${ENVIRONMENT} ApplicationSet deployed successfully"
+  environment:
+    name: development
+    action: start
+  only:
+    - develop
+    - main
+  artifacts:
+    paths:
+      - applicationset-${ENVIRONMENT}.yaml
+    expire_in: 1 day
+
+# Deploy to staging
+deploy:staging:
+  stage: deploy
+  image: alpine/k8s:${KUBECTL_VERSION}
+  variables:
+    ENVIRONMENT: "staging"
+    VALUES_FILE: "staging-values.yaml"
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_STAGING" | base64 -d > ~/.kube/config
+    - apk add --no-cache gettext
+  script:
+    - echo "Generating ApplicationSet for ${ENVIRONMENT}..."
+    - envsubst < applicationset-template.yaml > applicationset-${ENVIRONMENT}.yaml
+    - cat applicationset-${ENVIRONMENT}.yaml
+    - echo "Deploying ApplicationSet to ${ENVIRONMENT}..."
+    - kubectl apply -f applicationset-${ENVIRONMENT}.yaml -n ${ARGOCD_NAMESPACE}
+    - echo "✅ ${ENVIRONMENT} ApplicationSet deployed successfully"
+  environment:
+    name: staging
+    action: start
+  only:
+    - main
+  when: manual
+  artifacts:
+    paths:
+      - applicationset-${ENVIRONMENT}.yaml
+    expire_in: 1 day
+
+# Deploy to production
+deploy:prod:
+  stage: deploy
+  image: alpine/k8s:${KUBECTL_VERSION}
+  variables:
+    ENVIRONMENT: "prod"
+    VALUES_FILE: "prod-values.yaml"
+  before_script:
+    - mkdir -p ~/.kube
+    - echo "$KUBECONFIG_PROD" | base64 -d > ~/.kube/config
+    - apk add --no-cache gettext
+  script:
+    - echo "Generating ApplicationSet for ${ENVIRONMENT}..."
+    - envsubst < applicationset-template.yaml > applicationset-${ENVIRONMENT}.yaml
+    - cat applicationset-${ENVIRONMENT}.yaml
+    - echo "Deploying ApplicationSet to ${ENVIRONMENT}..."
+    - kubectl apply -f applicationset-${ENVIRONMENT}.yaml -n ${ARGOCD_NAMESPACE}
+    - echo "✅ ${ENVIRONMENT} ApplicationSet deployed successfully"
+  environment:
+    name: production
+    action: start
+  only:
+    - main
+    - tags
+  when: manual
+  artifacts:
+    paths:
+      - applicationset-${ENVIRONMENT}.yaml
+    expire_in: 7 days
+
+# Verify applications (generic)
+verify:applications:
+  stage: verify
+  image: alpine/k8s:${KUBECTL_VERSION}
+  before_script:
+    - mkdir -p ~/.kube
+    - |
+      if [ "$CI_COMMIT_BRANCH" == "develop" ]; then
+        echo "$KUBECONFIG_DEV" | base64 -d > ~/.kube/config
+        export ENVIRONMENT="dev"
+      elif [ "$CI_COMMIT_BRANCH" == "main" ] && [ -z "$CI_COMMIT_TAG" ]; then
+        echo "$KUBECONFIG_STAGING" | base64 -d > ~/.kube/config
+        export ENVIRONMENT="staging"
+      else
+        echo "$KUBECONFIG_PROD" | base64 -d > ~/.kube/config
+        export ENVIRONMENT="prod"
+      fi
+  script:
+    - echo "Verifying ${ENVIRONMENT} applications..."
+    - kubectl get applicationset retail-store-${ENVIRONMENT} -n ${ARGOCD_NAMESPACE}
+    - kubectl get applications -n ${ARGOCD_NAMESPACE} | grep "retail-store-.*-${ENVIRONMENT}"
+    - |
+      for app in cart catalog checkout ui; do
+        APP_NAME="retail-store-${app}-${ENVIRONMENT}"
+        STATUS=$(kubectl get application ${APP_NAME} -n ${ARGOCD_NAMESPACE} -o jsonpath='{.status.sync.status}' 2>/dev/null || echo "NotFound")
+        HEALTH=$(kubectl get application ${APP_NAME} -n ${ARGOCD_NAMESPACE} -o jsonpath='{.status.health.status}' 2>/dev/null || echo "Unknown")
+        echo "${APP_NAME}: Sync=${STATUS}, Health=${HEALTH}"
+      done
+  only:
+    - develop
+    - main
+    - tags
+  when: on_success
