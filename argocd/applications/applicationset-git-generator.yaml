@@ -1,0 +1,38 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: retail-store-${ENVIRONMENT}
+  namespace: argocd
+spec:
+  goTemplate: true
+  goTemplateOptions: ["missingkey=error"]
+  generators:
+    - git:
+        repoURL: https://github.com/smithdebug/retail-store-sample-app.git
+        revision: main
+        files:
+          - path: "src/**/app-config.json"
+  template:
+    metadata:
+      name: 'retail-store-{{.app.name}}-${ENVIRONMENT}'
+      annotations:
+        argocd.argoproj.io/sync-wave: '{{.app.syncWave}}'
+    spec:
+      project: retail-store
+      source:
+        repoURL: https://github.com/smithdebug/retail-store-sample-app.git
+        targetRevision: main
+        path: '{{.app.path}}'
+        helm:
+          valueFiles:
+            - values.yaml
+            - ${VALUES_FILE}
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: retail-store
+      syncPolicy:
+        automated:
+          prune: true
+          selfHeal: true
+        syncOptions:
+          - CreateNamespace=true
