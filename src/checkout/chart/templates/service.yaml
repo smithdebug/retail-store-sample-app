@@ -10,7 +10,4 @@ spec:
       targetPort: http
       protocol: TCP
       name: http
-
-        d  d,
-      dm
   selector: {{- include "checkout.selectorLabels" . | nindent 4 }}
