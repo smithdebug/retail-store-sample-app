@@ -1,0 +1,7 @@
+{
+  "app": {
+    "name": "checkout",
+    "path": "src/checkout/chart",
+    "syncWave": "2"
+  }
+}
