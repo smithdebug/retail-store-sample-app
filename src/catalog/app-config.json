@@ -1,0 +1,7 @@
+{
+  "app": {
+    "name": "catalog",
+    "path": "src/catalog/chart",
+    "syncWave": "1"
+  }
+}
