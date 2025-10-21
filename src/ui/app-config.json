@@ -1,0 +1,7 @@
+{
+  "app": {
+    "name": "ui",
+    "path": "src/ui/chart",
+    "syncWave": "3"
+  }
+}
